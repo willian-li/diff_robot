@@ -39,65 +39,64 @@ hardware_interface::CallbackReturn DiffDriveStmHardware::on_init(
 
   cfg_.left_wheel_name = info_.hardware_parameters["left_wheel_name"];
   cfg_.right_wheel_name = info_.hardware_parameters["right_wheel_name"];
-  cfg_.loop_rate = std::stof(info_.hardware_parameters["loop_rate"]);
+  cfg_.device = info_.hardware_parameters["device"];
+  cfg_.imu_name = info_.hardware_parameters["imu_name"];
   cfg_.wheel_distance = std::stod(info_.hardware_parameters["wheel_distance"]);
   cfg_.wheel_radius = std::stod(info_.hardware_parameters["wheel_radius"]);
-  cfg_.device = info_.hardware_parameters["device"];
   cfg_.baud_rate = std::stoi(info_.hardware_parameters["baud_rate"]);
   cfg_.timeout_ms = std::stoi(info_.hardware_parameters["timeout_ms"]);
-  cfg_.enc_counts_per_rev = std::stoi(info_.hardware_parameters["enc_counts_per_rev"]);
+
+  wheel_l_.setup(cfg_.left_wheel_name);
+  wheel_r_.setup(cfg_.right_wheel_name);
   
-  wheel_l_.setup(cfg_.left_wheel_name, cfg_.enc_counts_per_rev);
-  wheel_r_.setup(cfg_.right_wheel_name, cfg_.enc_counts_per_rev);
-  
-  for (const hardware_interface::ComponentInfo & joint : info_.joints)
-  {
-    // DiffBotSystem has exactly two states and one command interface on each joint
-    if (joint.command_interfaces.size() != 1)
-    {
-      RCLCPP_FATAL(
-        rclcpp::get_logger("DiffDriveStmHardware"),
-        "Joint '%s' has %zu command interfaces found. 1 expected.", joint.name.c_str(),
-        joint.command_interfaces.size());
-      return hardware_interface::CallbackReturn::ERROR;
-    }
+  // for (const hardware_interface::ComponentInfo & joint : info_.joints)
+  // {
+  //   // DiffBotSystem has exactly two states and one command interface on each joint
+  //   if (joint.command_interfaces.size() != 1)
+  //   {
+  //     RCLCPP_FATAL(
+  //       rclcpp::get_logger("DiffDriveStmHardware"),
+  //       "Joint '%s' has %zu command interfaces found. 1 expected.", joint.name.c_str(),
+  //       joint.command_interfaces.size());
+  //     return hardware_interface::CallbackReturn::ERROR;
+  //   }
 
-    if (joint.command_interfaces[0].name != hardware_interface::HW_IF_VELOCITY)
-    {
-      RCLCPP_FATAL(
-        rclcpp::get_logger("DiffDriveStmHardware"),
-        "Joint '%s' have %s command interfaces found. '%s' expected.", joint.name.c_str(),
-        joint.command_interfaces[0].name.c_str(), hardware_interface::HW_IF_VELOCITY);
-      return hardware_interface::CallbackReturn::ERROR;
-    }
+  //   if (joint.command_interfaces[0].name != hardware_interface::HW_IF_VELOCITY)
+  //   {
+  //     RCLCPP_FATAL(
+  //       rclcpp::get_logger("DiffDriveStmHardware"),
+  //       "Joint '%s' have %s command interfaces found. '%s' expected.", joint.name.c_str(),
+  //       joint.command_interfaces[0].name.c_str(), hardware_interface::HW_IF_VELOCITY);
+  //     return hardware_interface::CallbackReturn::ERROR;
+  //   }
 
-    if (joint.state_interfaces.size() != 2)
-    {
-      RCLCPP_FATAL(
-        rclcpp::get_logger("DiffDriveStmHardware"),
-        "Joint '%s' has %zu state interface. 2 expected.", joint.name.c_str(),
-        joint.state_interfaces.size());
-      return hardware_interface::CallbackReturn::ERROR;
-    }
+  //   if (joint.state_interfaces.size() != 2)
+  //   {
+  //     RCLCPP_FATAL(
+  //       rclcpp::get_logger("DiffDriveStmHardware"),
+  //       "Joint '%s' has %zu state interface. 2 expected.", joint.name.c_str(),
+  //       joint.state_interfaces.size());
+  //     return hardware_interface::CallbackReturn::ERROR;
+  //   }
 
-    if (joint.state_interfaces[0].name != hardware_interface::HW_IF_POSITION)
-    {
-      RCLCPP_FATAL(
-        rclcpp::get_logger("DiffDriveStmHardware"),
-        "Joint '%s' have '%s' as first state interface. '%s' expected.", joint.name.c_str(),
-        joint.state_interfaces[0].name.c_str(), hardware_interface::HW_IF_POSITION);
-      return hardware_interface::CallbackReturn::ERROR;
-    }
+  //   if (joint.state_interfaces[0].name != hardware_interface::HW_IF_POSITION)
+  //   {
+  //     RCLCPP_FATAL(
+  //       rclcpp::get_logger("DiffDriveStmHardware"),
+  //       "Joint '%s' have '%s' as first state interface. '%s' expected.", joint.name.c_str(),
+  //       joint.state_interfaces[0].name.c_str(), hardware_interface::HW_IF_POSITION);
+  //     return hardware_interface::CallbackReturn::ERROR;
+  //   }
 
-    if (joint.state_interfaces[1].name != hardware_interface::HW_IF_VELOCITY)
-    {
-      RCLCPP_FATAL(
-        rclcpp::get_logger("DiffDriveStmHardware"),
-        "Joint '%s' have '%s' as second state interface. '%s' expected.", joint.name.c_str(),
-        joint.state_interfaces[1].name.c_str(), hardware_interface::HW_IF_VELOCITY);
-      return hardware_interface::CallbackReturn::ERROR;
-    }
-  }
+  //   if (joint.state_interfaces[1].name != hardware_interface::HW_IF_VELOCITY)
+  //   {
+  //     RCLCPP_FATAL(
+  //       rclcpp::get_logger("DiffDriveStmHardware"),
+  //       "Joint '%s' have '%s' as second state interface. '%s' expected.", joint.name.c_str(),
+  //       joint.state_interfaces[1].name.c_str(), hardware_interface::HW_IF_VELOCITY);
+  //     return hardware_interface::CallbackReturn::ERROR;
+  //   }
+  // }
 
   return hardware_interface::CallbackReturn::SUCCESS;
 }
@@ -114,6 +113,27 @@ std::vector<hardware_interface::StateInterface> DiffDriveStmHardware::export_sta
     wheel_r_.name, hardware_interface::HW_IF_POSITION, &wheel_r_.pos));
   state_interfaces.emplace_back(hardware_interface::StateInterface(
     wheel_r_.name, hardware_interface::HW_IF_VELOCITY, &wheel_r_.vel));
+
+  state_interfaces.emplace_back(hardware_interface::StateInterface(
+    cfg_.imu_name, "angular_velocity.x", &imudata_.angular_velocity[0]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface(
+    cfg_.imu_name, "angular_velocity.y", &imudata_.angular_velocity[1]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface(
+    cfg_.imu_name, "angular_velocity.z", &imudata_.angular_velocity[2]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface(
+    cfg_.imu_name, "linear_acceleration.x", &imudata_.linear_acceleration[0]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface(
+    cfg_.imu_name, "linear_acceleration.y", &imudata_.linear_acceleration[1]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface(
+    cfg_.imu_name, "linear_acceleration.z", &imudata_.linear_acceleration[2]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface(
+    cfg_.imu_name, "orientation.w", &imudata_.orientation[0]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface(
+    cfg_.imu_name, "orientation.x", &imudata_.orientation[1]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface(
+    cfg_.imu_name, "orientation.y", &imudata_.orientation[2]));
+  state_interfaces.emplace_back(hardware_interface::StateInterface(
+    cfg_.imu_name, "orientation.z", &imudata_.orientation[3]));
 
   return state_interfaces;
 }
@@ -161,12 +181,13 @@ hardware_interface::return_type DiffDriveStmHardware::read(
   double Vx = 0;
   double Vyaw = 0;
   comms_.get_odom(Vx,Vyaw);
+  comms_.get_imu(imudata_.angular_velocity,imudata_.linear_acceleration,imudata_.orientation);
   wheel_l_.vel = (Vx - Vyaw * cfg_.wheel_distance/2)/cfg_.wheel_radius;
   wheel_r_.vel = (Vx + Vyaw * cfg_.wheel_distance/2)/cfg_.wheel_radius;
   wheel_l_.pos += wheel_l_.vel*delta_seconds; 
   wheel_r_.pos += wheel_r_.vel*delta_seconds; 
 
-  RCLCPP_INFO(rclcpp::get_logger("DiffDriveStmHardware"), "vx %.4f,Vyaw %.4f",Vx,Vyaw);
+  // RCLCPP_INFO(rclcpp::get_logger("DiffDriveStmHardware"), "angular_velocity %.4f,",imudata_.angular_velocity[0]);
   
   return hardware_interface::return_type::OK;
 }
@@ -182,7 +203,7 @@ hardware_interface::return_type diffdrive_stm ::DiffDriveStmHardware::write(
   //发给stm32的期望角速度，stm32根据轮子间距计算每个轮的速度，所以此处除以的不是现在车的间距而是以前车的间距：0.162
   double body_Vyaw = (wr_vel - wl_vel)/0.162;
   comms_.write_cmd(body_vel,body_Vyaw);
-  RCLCPP_INFO(rclcpp::get_logger("DiffDriveStmHardware"), "body_vel %.4f,body_Vyaw %.4f",body_vel,body_Vyaw);
+  // RCLCPP_INFO(rclcpp::get_logger("DiffDriveStmHardware"), "body_vel %.4f,body_Vyaw %.4f",body_vel,body_Vyaw);
 
   return hardware_interface::return_type::OK;
 }

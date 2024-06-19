@@ -43,17 +43,20 @@ struct Config
 {
   std::string left_wheel_name = "";
   std::string right_wheel_name = "";
-  float loop_rate = 0.0;
   std::string device = "";
-  int baud_rate = 0;
-  int timeout_ms = 0;
-  int enc_counts_per_rev = 0;
+  std::string imu_name = "";
   double wheel_distance = 0;
   double wheel_radius = 0;
-  int pid_p = 0;
-  int pid_d = 0;
-  int pid_i = 0;
-  int pid_o = 0;
+  int baud_rate = 0;
+  int timeout_ms = 0;
+
+};
+
+struct Imudata
+{
+  std::vector<double> angular_velocity = {0,0,0};
+  std::vector<double> linear_acceleration = {0,0,0};
+  std::vector<double> orientation = {0,0,0,0};
 };
 
 public:
@@ -89,15 +92,9 @@ private:
   // Parameters for the DiffBot simulation
   Config cfg_;
   Stm32Comms comms_;
+  Imudata imudata_;
   Wheel wheel_l_;
   Wheel wheel_r_;
-  double hw_start_sec_;
-  double hw_stop_sec_;
-
-  // Store the command for the simulated robot
-  std::vector<double> hw_commands_;
-  std::vector<double> hw_positions_;
-  std::vector<double> hw_velocities_;
 };
 
 }  // namespace diffdrive_stm

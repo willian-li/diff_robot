@@ -7,6 +7,13 @@ controller_manager:
 
     diffbot_base_controller:
       type: diff_drive_controller/DiffDriveController
+    
+    imu_sensor_broadcaster:
+      type: imu_sensor_broadcaster/IMUSensorBroadcaster
+imu_sensor_broadcaster:
+  ros__parameters:
+    sensor_name: "diff_imu_joint"
+    frame_id:  "diff_imu_frame"
 
 diffbot_base_controller:
   ros__parameters:

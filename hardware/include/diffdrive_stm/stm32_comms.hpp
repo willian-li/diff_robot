@@ -56,34 +56,16 @@ public:
     return serial_conn_.IsOpen();
   }
 
-  std::string send_msg(const std::vector<unsigned char> &msg_to_send)
+  void send_msg(const std::vector<unsigned char> &msg_to_send)
   {
     serial_conn_.FlushIOBuffers(); // Just in case
     serial_conn_.Write(msg_to_send);
-
-    std::string response = "";
-    // try
-    // {
-    //   // Responses end with \r\n so we will read up to (and including) the \n.
-    //   serial_conn_.ReadLine(response, '\n', timeout_ms_);
-    // }
-    // catch (const LibSerial::ReadTimeout&)
-    // {
-    //     std::cerr << "The ReadByte() call has timed out." << std::endl ;
-    // }
-
-    // if (print_output)
-    // {
-    //   std::cout << " Recv: " << response << std::endl;
-    // }
-
-    return response;
   }
 
   void getInfo()
   {
     std::vector<unsigned char> outputData = {0x5a, 0x06, 0x01, 0x13, 0x00, 0x33};
-    std::string response = send_msg(outputData);
+    send_msg(outputData);
   }
 
   void read_data(double &Vx,double &Vyaw)
@@ -110,7 +92,7 @@ public:
   void get_odom(double &Vx,double &Vyaw)
   {
     std::vector<unsigned char> outputData = {0x5a, 0x06, 0x01, 0x11, 0x00, 0xa2};
-    std::string response = send_msg(outputData);
+    send_msg(outputData);
     read_data(Vx,Vyaw);
   }
   unsigned char crc_1byte(unsigned char data) {
@@ -127,8 +109,6 @@ public:
     }
     return crc_1byte;
   }
-
-  
 
   unsigned char crc_byte(std::vector<unsigned char> data, int length) {
       unsigned char ret = 0;
@@ -149,120 +129,45 @@ public:
     outputData[9] = static_cast<int>(angular*1000.0)&0xff;
     unsigned char crc_8 = crc_byte(outputData, outputData.size() - 1);
     outputData[11] = crc_8;
-    std::string response = send_msg(outputData);
+    send_msg(outputData);
   }
 
-  // void deal_data(const std::vector<unsigned char>& data_vector)
-  // {
-  //   if(data_vector[3] == 0x04)
-  //   {
-  //     Vx =    data_vector[4]*256;
-  //     Vx +=   data_vector[5];
-  //     Vy =    data_vector[6]*256;
-  //     Vy +=   data_vector[7];
-  //     Vyaw =  data_vector[8]*256;
-  //     Vyaw += data_vector[9];
-  //   }
-  //   else if(data_vector[3] == 0x06)
-  //   {
-  //     Yawz =  data_vector[8]*256;
-  //     Yawz += data_vector[9];
-  //   }
-  //   else if(data_vector[3] == 0x08)
-  //   {
-  //     Vvoltage = data_vector[4]*256;
-  //     Vvoltage += data_vector[5];
-  //     Icurrent = data_vector[6]*256;
-  //     Icurrent += data_vector[7];
-  //   }
-  //   else if (data_vector[3] == 0x0a)
-  //   {
-  //     Vx =    data_vector[4]*256;
-  //     Vx +=   data_vector[5];
-  //     Yawz =  data_vector[6]*256;
-  //     Yawz += data_vector[7];
-  //     Vyaw =  data_vector[8]*256;
-  //     Vyaw += data_vector[9];
-  //   }
-  //   else if(data_vector[3] == 0x12)
-  //   {
-  //     Vx =    data_vector[4]*256;
-  //     Vx +=   data_vector[5];
-  //     Vy =  data_vector[6]*256;
-  //     Vy += data_vector[7];
-  //     Yawz =  data_vector[8]*256;
-  //     Yawz += data_vector[9];    
-  //     Vyaw =  data_vector[10]*256;
-  //     Vyaw += data_vector[11]; 
-  //   }
-  //   else if(data_vector[3] == 0x14)
-  //   {
-  //     Gyro[0] = int(((data_vector[4]&0xff)<<24)|((data_vector[5]&0xff)<<16)|((data_vector[6]&0xff)<<8)|(data_vector[7]&0xff));
-  //     Gyro[1] = int(((data_vector[8]&0xff)<<24)|((data_vector[9]&0xff)<<16)|((data_vector[10]&0xff)<<8)|(data_vector[11]&0xff));
-  //     Gyro[2] = int(((data_vector[12]&0xff)<<24)|((data_vector[13]&0xff)<<16)|((data_vector[14]&0xff)<<8)|(data_vector[15]&0xff));
-
-  //     Accel[0] = int(((data_vector[16]&0xff)<<24)|((data_vector[17]&0xff)<<16)|((data_vector[18]&0xff)<<8)|(data_vector[19]&0xff));
-  //     Accel[1] = int(((data_vector[20]&0xff)<<24)|((data_vector[21]&0xff)<<16)|((data_vector[22]&0xff)<<8)|(data_vector[23]&0xff));
-  //     Accel[2] = int(((data_vector[24]&0xff)<<24)|((data_vector[25]&0xff)<<16)|((data_vector[26]&0xff)<<8)|(data_vector[27]&0xff));
-
-  //     Quat[0] = int((data_vector[28]&0xff)<<8|data_vector[29]);
-  //     Quat[1] = int((data_vector[30]&0xff)<<8|data_vector[31]);
-  //     Quat[2] = int((data_vector[32]&0xff)<<8|data_vector[33]);
-  //     Quat[3] = int((data_vector[34]&0xff)<<8|data_vector[35]);
-  //   }
-  //   else if(data_vector[3] == 0x1a)
-  //   {
-  //     Sonar[0] = data_vector[4];
-  //     Sonar[1] = data_vector[5];
-  //     Sonar[2] = data_vector[6];
-  //     Sonar[3] = data_vector[7];    
-  //   }
-  //   else if(data_vector[3] == 0xf2)
-  //   {
-  //     movebase_hardware_version[0] = data_vector[4];
-  //     movebase_hardware_version[1] = data_vector[5];
-  //     movebase_hardware_version[2] = data_vector[6];
-  //     movebase_firmware_version[0] = data_vector[7];
-  //     movebase_firmware_version[1] = data_vector[8];
-  //     movebase_firmware_version[2] = data_vector[9];
-    
-  //   }
-
-
-
-  // }
+  void get_imu(std::vector<double> &angular_velocity,std::vector<double> &linear_acceleration,std::vector<double> &orientation)
+  {
+    //发送请求获取imu
+    std::vector<unsigned char> outputData = {0x5a, 0x06, 0x01, 0x13, 0x00, 0x33};
+    send_msg(outputData);
+    //读取数据
+    std::vector<unsigned char> data_vector;
+    serial_conn_.Read(data_vector, 36);
+    //处理数据
+    if(data_vector[3] == 0x14)
+    {
+      std::vector<int> int_vector;
+      for(auto it = data_vector.begin(); it != data_vector.end(); ++it)
+      {
+          int value = static_cast<int>(*it);
+          int_vector.push_back(value); 
+      }
+      angular_velocity[0] = static_cast<double>(static_cast<int32_t>(((int_vector[4]&0xff)<<24)|((int_vector[5]&0xff)<<16)|((int_vector[6]&0xff)<<8)|(int_vector[7]&0xff)))/100000;
+      angular_velocity[1] = static_cast<double>(static_cast<int32_t>(((int_vector[8]&0xff)<<24)|((int_vector[9]&0xff)<<16)|((int_vector[10]&0xff)<<8)|(int_vector[11]&0xff)))/100000;
+      angular_velocity[2] = static_cast<double>(static_cast<int32_t>(((int_vector[12]&0xff)<<24)|((int_vector[13]&0xff)<<16)|((int_vector[14]&0xff)<<8)|(int_vector[15]&0xff)))/100000;
+      
+      linear_acceleration[0] = static_cast<double>(static_cast<int32_t>(((int_vector[16]&0xff)<<24)|((int_vector[17]&0xff)<<16)|((int_vector[18]&0xff)<<8)|(int_vector[19]&0xff)))/100000;
+      linear_acceleration[1] = static_cast<double>(static_cast<int32_t>(((int_vector[20]&0xff)<<24)|((int_vector[21]&0xff)<<16)|((int_vector[22]&0xff)<<8)|(int_vector[23]&0xff)))/100000;
+      linear_acceleration[2] = static_cast<double>(static_cast<int32_t>(((int_vector[24]&0xff)<<24)|((int_vector[25]&0xff)<<16)|((int_vector[26]&0xff)<<8)|(int_vector[27]&0xff)))/100000;
+      
+      orientation[0] = static_cast<double>(static_cast<int16_t>((int_vector[28]&0xff)<<8|(int_vector[29]&0xff)))/10000;
+      orientation[1] = static_cast<double>(static_cast<int16_t>((int_vector[30]&0xff)<<8|(int_vector[31]&0xff)))/10000;
+      orientation[2] = static_cast<double>(static_cast<int16_t>((int_vector[32]&0xff)<<8|(int_vector[33]&0xff)))/10000;
+      orientation[3] = static_cast<double>(static_cast<int16_t>((int_vector[34]&0xff)<<8|(int_vector[35]&0xff)))/10000;
+    }
+  }
 
 
 private:
     LibSerial::SerialPort serial_conn_;
     int timeout_ms_;
-    // double pose_x = 0.0;
-    // double pose_y = 0.0;
-    // double pose_yaw = 0.0;
-    // double serialIDLE_flag = 0;
-    // double trans_x = 0.0;
-    // double trans_y = 0.0;
-    // double rotat_z = 0.0;
-    // double speed = 0.0;
-    // double steering_angle = 0.0;
-    // double sendcounter = 0;
-    // bool ImuErrFlag = false;
-    // bool EncoderFlag = false;
-    // bool BatteryFlag = false;
-    // double OdomTimeCounter = 0;
-    // double BatteryTimeCounter = 0;
-    // double Vx = 0;
-    // double Vy = 0;
-    // double Vyaw = 0;
-    // double Yawz = 0;
-    // double Vvoltage = 0;
-    // double Icurrent = 0;
-    // std::vector<double> Gyro = {0,0,0};
-    // std::vector<double> Accel = {0,0,0};
-    // std::vector<double> Quat = {0,0,0,0};
-    // std::vector<double> Sonar = {0,0,0,0};
-    // std::vector<double> movebase_firmware_version = {0,0,0};
-    // std::vector<double> movebase_hardware_version = {0,0,0};
 };
 
 #endif // DIFFDRIVE_ARDUINO_ARDUINO_COMMS_HPP

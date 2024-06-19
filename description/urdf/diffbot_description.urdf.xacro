@@ -181,7 +181,59 @@
           iyy="${caster_wheel_mass * 0.4 * (caster_wheel_radius * caster_wheel_radius)}" iyz="0.0"
           izz="${caster_wheel_mass * 0.4 * (caster_wheel_radius * caster_wheel_radius)}"/>
         </inertial>
-      </link>
+    </link>
+
+    <joint name="diff_imu_joint" type="fixed">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}diff_imu"/>
+      <origin xyz="${-base_radius/2 + caster_wheel_radius} 0 ${z_offset}" rpy="0 0 0"/>
+    </joint>
+
+    <link name="${prefix}diff_imu">
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${caster_wheel_radius}"/>
+        </geometry>
+      </collision>
+
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${caster_wheel_radius}"/>
+        </geometry>
+        <material name="white"/>
+      </visual>
+
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="${caster_wheel_mass}"/>
+        <inertia
+          ixx="${caster_wheel_mass * 0.4 * (caster_wheel_radius * caster_wheel_radius)}" ixy="0.0" ixz="0.0"
+          iyy="${caster_wheel_mass * 0.4 * (caster_wheel_radius * caster_wheel_radius)}" iyz="0.0"
+          izz="${caster_wheel_mass * 0.4 * (caster_wheel_radius * caster_wheel_radius)}"/>
+        </inertial>
+    </link>
+
+    <joint name="lidar_joint" type="fixed">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}laser_link"/>
+      <origin xyz="${-base_radius/2 + caster_wheel_radius} 0 ${z_offset}" rpy="0 0 0"/>
+    </joint>
+    <link name="laser_link">
+      <visual>
+          <geometry>
+              <cylinder radius="0.05" length="0.04"/>
+          </geometry>
+          <material name="red"/>
+      </visual>
+      <collision>
+          <geometry>
+              <cylinder radius="0.05" length="0.04"/>
+          </geometry>
+      </collision>
+
+    </link>
 
   </xacro:macro>
 

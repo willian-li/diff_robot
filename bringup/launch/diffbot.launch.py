@@ -21,6 +21,7 @@ from launch.substitutions import Command, FindExecutable, PathJoinSubstitution, 
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
+from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     # Declare arguments
@@ -98,7 +99,54 @@ def generate_launch_description():
         executable="spawner",
         arguments=["diffbot_base_controller", "--controller-manager", "/controller_manager"],
     )
+    imu_sensor_broadcaster_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["imu_sensor_broadcaster", "--controller-manager", "/controller_manager"],
+    )
 
+    imu_path =  PathJoinSubstitution(
+        [
+            FindPackageShare("diffdrive_stm"),
+            "config",
+            "ekf.yaml",
+        ]
+    )
+    robot_localization_node = Node(
+       package='robot_localization',
+       executable='ekf_node',
+       name='ekf_filter_node',
+       output='screen',
+       parameters=[imu_path],
+       remappings=[
+            ("/odometry/filtered", "/odom"),
+        ],
+    )
+    
+    lidar_node = Node(
+       package='rplidar_ros',
+       executable='rplidar_composition',
+       output='screen',
+       parameters=[{
+            'serial_port': '/dev/ttyUSB0',
+            'frame_id':'laser_link',
+            'angle_compensate': True,
+            'scan_mode': 'Standard',
+            'serial_baudrate':115200,
+       }]
+    )   
+
+
+    slam_node = Node(
+          
+          package='slam_toolbox',
+          executable='sync_slam_toolbox_node',
+          name='slam_toolbox',
+          output='screen',
+          parameters=[
+             get_package_share_directory("diffdrive_stm") + '/config/mapper_params_offline.yaml'
+          ],
+        )
 
 
     # Delay start of robot_controller after `joint_state_broadcaster`
@@ -113,7 +161,11 @@ def generate_launch_description():
         control_node,
         robot_state_pub_node,
         joint_state_broadcaster_spawner,
+        imu_sensor_broadcaster_spawner,
         delay_robot_controller_spawner_after_joint_state_broadcaster_spawner,
+        robot_localization_node,
+        lidar_node,
+        slam_node,
     ]
 
     return LaunchDescription(declared_arguments + nodes)
